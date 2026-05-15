@@ -3,9 +3,10 @@
     "tasks": [
         {
             "label": "tic-80 preproc",
-            "command": "python",
-            "type": "shell",
-            "args": ["tic-preproc/tic-preproc.py", "${file}"],
+            "command": "tic-preproc",
+            "type": "process",
+            "args": ["${file}"],
+            "problemMatcher": [],
             "group": {
                 "kind": "build",
                 "isDefault": true

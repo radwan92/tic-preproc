@@ -14,9 +14,16 @@ cd <tic-80-carts-directory>
 git clone https://github.com/radwan92/tic-preproc.git
 ```
 
-Copy the `.vscode` directory to your carts directory:
+Install the global `tic-preproc` command:
 ```sh
-cp -r tic-preproc/.vscode .
+cd tic-preproc
+py -m pip install --user -e .
+cd ..
+```
+
+Copy the sample `.vscode` directory to your carts directory:
+```sh
+cp -r tic-preproc/samples/.vscode .
 ```
 
 Add an include directive to your TIC-80 code:
@@ -70,6 +77,14 @@ Go to your TIC-80 carts directory (usually `%APPDATA%\com.nesbox.tic\TIC-80` on 
 git clone https://github.com/radwan92/tic-preproc
 ```
 
+Install it as a user-level command:
+```sh
+cd tic-preproc
+py -m pip install --user -e .
+```
+
+After installation, `tic-preproc` must be available on your `PATH`.
+
 ### 🪟 VS Code setup
 
 Add a [VS Code task](https://code.visualstudio.com/docs/editor/tasks):
@@ -79,9 +94,10 @@ Add a [VS Code task](https://code.visualstudio.com/docs/editor/tasks):
     "tasks": [
         {
             "label": "tic-80 preproc",
-            "command": "python",
-            "type": "shell",
-            "args": ["tic-preproc/tic-preproc.py", "${file}"],
+            "command": "tic-preproc",
+            "type": "process",
+            "args": ["${file}"],
+            "problemMatcher": [],
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -99,7 +115,7 @@ This assumes the following directory structure:
 ```
 TIC-80
 ├── tic-preproc
-|   ├── tic-preproc.py
+|   ├── pyproject.toml
 |
 ├── .vscode
 |   ├── tasks.json
@@ -113,10 +129,10 @@ where TIC-80 is the carts directory (usually `%APPDATA%\com.nesbox.tic\TIC-80` o
 
 You can set up a similar task in any other IDE that supports running external commands.
 
-All you need to do is execute the preprocessor script with the path to the file you are currently editing.
+All you need to do is execute the preprocessor command with the path to the file you are currently editing.
 
 ```sh
-py tic-preproc/tic-preproc.py ${file}
+tic-preproc ${file}
 ```
 
 ## 🕹️ Usage
@@ -131,10 +147,10 @@ and execute the build task/step/script from your IDE or terminal.
 
 #### ⚒️ Manual
 
-Execute the preprocessor script from your favorite terminal:
+Execute the preprocessor command from your favorite terminal:
 
 ```sh
-py tic-preproc.py ../path/to/cartridge.tic
+tic-preproc ../path/to/cartridge.tic
 ```
 
 It can also be used with any file that belongs to the same directory as the cartridge file, or one of its subdirectories. In that case it will try to automatically find the cartridge file by traversing the directory tree.
@@ -143,7 +159,7 @@ It can also be used with any file that belongs to the same directory as the cart
 
 With other languages (default is Lua):
 ```sh
-py tic-preproc.py ../path/to/cartridge.tic --lang=python
+tic-preproc ../path/to/cartridge.tic --lang=python
 ```
 
 > ❕If targeting a game script file instead of .tic file, the `--lang` option is 
@@ -154,7 +170,7 @@ py tic-preproc.py ../path/to/cartridge.tic --lang=python
 
 Use -h or --help to see the available options.
 ```sh
-py tic-preproc.py -h
+tic-preproc -h
 ```
 
 ### 💯 Full example
@@ -163,7 +179,7 @@ Directory structure:
 ```
 TIC-80
 ├── tic-preproc
-|   ├── tic-preproc.py
+|   ├── pyproject.toml
 |
 ├── hello-world
     ├── hello-world.tic
@@ -192,7 +208,7 @@ end
 
 Executing from the TIC-80 directory:
 ```sh
-py ./tic-preproc/tic-preproc.py ./hello-world/hello-world.tic
+tic-preproc ./hello-world/hello-world.tic
 ```
 Or VS Code task is set up, simply `Ctrl+Shift+B` in VS Code when editing `main.lua` or `core.lua`.
 
