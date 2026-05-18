@@ -2,7 +2,7 @@ import os
 
 from tic_preproc.config import PreprocessOptions, dbg_print
 
-STRIP_DIRECTIVE = '#strip'
+STRIP_DIRECTIVE = '#:strip'
 
 
 def expand_includes(

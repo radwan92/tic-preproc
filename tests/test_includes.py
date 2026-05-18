@@ -113,7 +113,24 @@ class IncludeExpansionTests(unittest.TestCase):
                 result,
             )
 
-    def test_strip_lines_are_omitted_from_injected_content(self):
+    def test_colon_strip_lines_are_omitted_from_injected_content(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with open(os.path.join(tmp, 'main.py'), 'w', encoding='utf-8') as f:
+                f.write('from radlib_py.tic_80_api import * #:strip\n\nt=0')
+
+            result = expand_includes(
+                '# #include main.py',
+                tmp,
+                os.path.join(tmp, 'game.tic'),
+                PreprocessOptions(language='python'),
+            )
+
+            self.assertEqual(
+                '# #include main.py\n\nt=0\n# #endinclude main.py',
+                result,
+            )
+
+    def test_plain_hash_strip_lines_are_retained_as_content(self):
         with tempfile.TemporaryDirectory() as tmp:
             with open(os.path.join(tmp, 'main.py'), 'w', encoding='utf-8') as f:
                 f.write('from radlib_py.tic_80_api import * #strip\n\nt=0')
@@ -126,7 +143,7 @@ class IncludeExpansionTests(unittest.TestCase):
             )
 
             self.assertEqual(
-                '# #include main.py\n\nt=0\n# #endinclude main.py',
+                '# #include main.py\nfrom radlib_py.tic_80_api import * #strip\n\nt=0\n# #endinclude main.py',
                 result,
             )
 
