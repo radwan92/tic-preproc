@@ -137,6 +137,28 @@ class IncludeExpansionTests(unittest.TestCase):
                 result,
             )
 
+    def test_python_import_include_expands_direct_module(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_dir = os.path.join(tmp, 'dissolve')
+            radlib_dir = os.path.join(tmp, 'radlib')
+            os.makedirs(project_dir)
+            os.makedirs(radlib_dir)
+
+            with open(os.path.join(radlib_dir, 'game.py'), 'w', encoding='utf-8') as f:
+                f.write('class Game:\n  pass')
+
+            result = expand_includes(
+                'from radlib.game import Game #:include',
+                project_dir,
+                os.path.join(project_dir, 'game.tic'),
+                PreprocessOptions(language='python'),
+            )
+
+            self.assertEqual(
+                'from radlib.game import Game #:include\nclass Game:\n  pass\n#endinclude radlib/game.py',
+                result,
+            )
+
     def test_colon_strip_lines_are_omitted_from_injected_content(self):
         with tempfile.TemporaryDirectory() as tmp:
             with open(os.path.join(tmp, 'main.py'), 'w', encoding='utf-8') as f:
@@ -179,6 +201,19 @@ class IncludeExpansionTests(unittest.TestCase):
                     tmp,
                     'game.tic',
                     PreprocessOptions(language='lua'),
+                )
+
+    def test_missing_import_include_mentions_calling_file_and_line(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_dir = os.path.join(tmp, 'dissolve')
+            os.makedirs(project_dir)
+
+            with self.assertRaisesRegex(ValueError, 'game.tic #1'):
+                expand_includes(
+                    'from radlib.missing import Game #:include',
+                    project_dir,
+                    os.path.join(project_dir, 'game.tic'),
+                    PreprocessOptions(language='python'),
                 )
 
 
