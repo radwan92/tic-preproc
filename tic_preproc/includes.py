@@ -13,12 +13,13 @@ def expand_includes(
         is_top_level: bool = True
 ) -> str:
     lines = source.split('\n')
-    return '\n'.join(_expand_include_lines(lines, project_dir, file_name, options, is_top_level))
+    include_base_dir = os.path.dirname(file_name) if os.path.isabs(file_name) else project_dir
+    return '\n'.join(_expand_include_lines(lines, include_base_dir, file_name, options, is_top_level))
 
 
 def _expand_include_lines(
         lines: list[str],
-        project_dir: str,
+        include_base_dir: str,
         file_name: str,
         options: PreprocessOptions,
         is_top_level: bool
@@ -43,7 +44,7 @@ def _expand_include_lines(
         include_file = start_line.split(' ')[-1].strip().strip('"')
         include_full_path = include_file
         if not os.path.isabs(include_file):
-            include_full_path = os.path.join(project_dir, include_file)
+            include_full_path = os.path.normpath(os.path.join(include_base_dir, include_file))
         dbg_print(f'{file_name} includes: {include_full_path}')
 
         if not os.path.exists(include_full_path):
@@ -53,7 +54,7 @@ def _expand_include_lines(
             include_source = f.read().decode('utf-8').replace('\r\n', '\n').replace('\r', '\n')
             include_content = _expand_include_lines(
                 include_source.split('\n'),
-                project_dir,
+                os.path.dirname(include_full_path),
                 include_file,
                 options,
                 False

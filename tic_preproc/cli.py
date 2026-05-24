@@ -16,7 +16,7 @@ def build_parser() -> argparse.ArgumentParser:
     description = ('tic-80 preprocessor. Searches for the .tic file in the project, preprocesses the code section and'
                    'writes it back to disk. Currently the only supported directive is #include which appends included '
                    'files. The included files can also include other files, but there is no protection against '
-                   'circular includes. The included files must be relative to the project root or absolute paths.')
+                   'circular includes. Relative includes are resolved from the file that contains the directive.')
 
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
 

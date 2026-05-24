@@ -60,6 +60,30 @@ class IncludeExpansionTests(unittest.TestCase):
                 result,
             )
 
+    def test_nested_includes_are_resolved_relative_to_including_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_dir = os.path.join(tmp, 'dissolve')
+            radlib_dir = os.path.join(tmp, 'radlib')
+            os.makedirs(project_dir)
+            os.makedirs(radlib_dir)
+
+            with open(os.path.join(radlib_dir, 'game.py'), 'w', encoding='utf-8') as f:
+                f.write('def TIC():\n# #include time.py\nupdate()')
+            with open(os.path.join(radlib_dir, 'time.py'), 'w', encoding='utf-8') as f:
+                f.write('ticks = 0')
+
+            result = expand_includes(
+                '# #include ../radlib/game.py',
+                project_dir,
+                os.path.join(project_dir, 'game.tic'),
+                PreprocessOptions(language='python'),
+            )
+
+            self.assertEqual(
+                '# #include ../radlib/game.py\ndef TIC():\nticks = 0\nupdate()\n# #endinclude ../radlib/game.py',
+                result,
+            )
+
     def test_nested_include_markers_can_be_retained(self):
         with tempfile.TemporaryDirectory() as tmp:
             with open(os.path.join(tmp, 'main.py'), 'w', encoding='utf-8') as f:
