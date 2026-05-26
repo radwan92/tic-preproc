@@ -16,7 +16,7 @@ def expand_includes(
 ) -> str:
     lines = source.split('\n')
     include_base_dir = os.path.dirname(file_name) if os.path.isabs(file_name) else project_dir
-    return '\n'.join(_expand_include_lines(lines, include_base_dir, file_name, options, is_top_level))
+    return '\n'.join(_expand_include_lines(lines, include_base_dir, file_name, options, is_top_level, set()))
 
 
 def _expand_include_lines(
@@ -24,7 +24,8 @@ def _expand_include_lines(
         include_base_dir: str,
         file_name: str,
         options: PreprocessOptions,
-        is_top_level: bool
+        is_top_level: bool,
+        included_paths: set[str]
 ) -> list[str]:
     dbg_print(f'Preprocessing file: {file_name}')
     keep_includes = is_top_level or options.retain_nested_includes
@@ -64,27 +65,31 @@ def _expand_include_lines(
         if not os.path.exists(include_full_path):
             raise ValueError(f'{file_name} #{i + 1}: included file not found: {include_full_path}')
 
-        with open(include_full_path, 'rb') as f:
-            include_source = f.read().decode('utf-8').replace('\r\n', '\n').replace('\r', '\n')
-            include_content = _expand_include_lines(
-                include_source.split('\n'),
-                os.path.dirname(include_full_path),
-                include_file,
-                options,
-                False
-            )
-
         past_end_include_line = include_line + 1
-        has_end_include = False
 
         if is_top_level:
             for j, end_line in enumerate(lines[i:], start=i):
                 if f'{options.endinclude_format} {include_file}' in end_line:
-                    has_end_include = True
                     past_end_include_line = j + 1
                     break
 
         original_len = len(lines)
+        canonical_include_path = _canonical_include_path(include_full_path)
+
+        if canonical_include_path in included_paths:
+            include_content = []
+        else:
+            included_paths.add(canonical_include_path)
+            with open(include_full_path, 'rb') as f:
+                include_source = f.read().decode('utf-8').replace('\r\n', '\n').replace('\r', '\n')
+                include_content = _expand_include_lines(
+                    include_source.split('\n'),
+                    os.path.dirname(include_full_path),
+                    include_file,
+                    options,
+                    False,
+                    included_paths
+                )
 
         if keep_includes:
             if IMPORT_INCLUDE_DIRECTIVE in start_line:
@@ -103,6 +108,10 @@ def _expand_include_lines(
         i = past_end_include_line + delta_len - 1
 
     return lines
+
+
+def _canonical_include_path(path: str) -> str:
+    return os.path.normcase(os.path.abspath(path))
 
 
 def _resolve_import_include(

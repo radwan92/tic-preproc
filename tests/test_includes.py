@@ -159,6 +159,38 @@ class IncludeExpansionTests(unittest.TestCase):
                 result,
             )
 
+    def test_shared_nested_import_include_is_expanded_only_once(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_dir = os.path.join(tmp, 'rainbow')
+            radlib_dir = os.path.join(tmp, 'radlib')
+            os.makedirs(project_dir)
+            os.makedirs(radlib_dir)
+
+            with open(os.path.join(radlib_dir, 'ram.py'), 'w', encoding='utf-8') as f:
+                f.write('class Ram:\n  pass')
+            with open(os.path.join(radlib_dir, 'colors.py'), 'w', encoding='utf-8') as f:
+                f.write('from radlib.ram import Ram #:include\n\nclass Colors:\n  pass')
+
+            result = expand_includes(
+                'from radlib.ram import Ram #:include\nfrom radlib.colors import Colors #:include',
+                project_dir,
+                os.path.join(project_dir, 'game.tic'),
+                PreprocessOptions(language='python'),
+            )
+
+            self.assertEqual(
+                'from radlib.ram import Ram #:include\n'
+                'class Ram:\n'
+                '  pass\n'
+                '#endinclude radlib/ram.py\n'
+                'from radlib.colors import Colors #:include\n'
+                '\n'
+                'class Colors:\n'
+                '  pass\n'
+                '#endinclude radlib/colors.py',
+                result,
+            )
+
     def test_colon_strip_lines_are_omitted_from_injected_content(self):
         with tempfile.TemporaryDirectory() as tmp:
             with open(os.path.join(tmp, 'main.py'), 'w', encoding='utf-8') as f:
