@@ -35,6 +35,11 @@ def _expand_include_lines(
         i += 1
         start_line = lines[i]
 
+        if start_line.strip() == IMPORT_INCLUDE_DIRECTIVE:
+            del lines[i]
+            i -= 1
+            continue
+
         if STRIP_DIRECTIVE in start_line:
             del lines[i]
             i -= 1
@@ -56,6 +61,17 @@ def _expand_include_lines(
             include_full_path = include_file
             if not os.path.isabs(include_file):
                 include_full_path = os.path.normpath(os.path.join(include_base_dir, include_file))
+        elif options.language == 'python':
+            auto_marker, include_file, include_full_path = _resolve_auto_import_directive(
+                start_line,
+                include_base_dir,
+            )
+            if auto_marker == STRIP_DIRECTIVE:
+                del lines[i]
+                i -= 1
+                continue
+            if auto_marker != IMPORT_INCLUDE_DIRECTIVE:
+                continue
         else:
             continue
 
@@ -92,7 +108,7 @@ def _expand_include_lines(
                 )
 
         if keep_includes:
-            if IMPORT_INCLUDE_DIRECTIVE in start_line:
+            if IMPORT_INCLUDE_DIRECTIVE in start_line or options.include_format not in start_line:
                 include_prefix = ''
             else:
                 include_prefix = start_line.split(options.include_format, 1)[0]
@@ -141,7 +157,47 @@ def _resolve_import_include(
     return include_file, include_full_path
 
 
+def _resolve_auto_import_directive(
+        line: str,
+        include_base_dir: str
+) -> tuple[str | None, str | None, str | None]:
+    try:
+        parsed = ast.parse(line)
+    except SyntaxError:
+        return None, None, None
+
+    if len(parsed.body) != 1:
+        return None, None, None
+
+    statement = parsed.body[0]
+    if isinstance(statement, ast.ImportFrom):
+        if statement.level != 0 or not statement.module:
+            return None, None, None
+        module = statement.module
+    elif isinstance(statement, ast.Import):
+        if len(statement.names) != 1:
+            return None, None, None
+        module = statement.names[0].name
+    else:
+        return None, None, None
+
+    include_file = module.replace('.', '/') + '.py'
+    include_full_path = _find_existing_import_include_path(include_file, include_base_dir)
+    marker = _get_first_line_marker(include_full_path) if include_full_path else None
+    if not marker:
+        return None, None, None
+
+    return marker, include_file, include_full_path
+
+
 def _find_import_include_path(include_file: str, include_base_dir: str) -> str:
+    include_full_path = _find_existing_import_include_path(include_file, include_base_dir)
+    if include_full_path:
+        return include_full_path
+    return os.path.normpath(os.path.join(include_base_dir, include_file))
+
+
+def _find_existing_import_include_path(include_file: str, include_base_dir: str) -> str | None:
     current_dir = os.path.abspath(include_base_dir)
     while True:
         candidate = os.path.normpath(os.path.join(current_dir, include_file))
@@ -150,5 +206,13 @@ def _find_import_include_path(include_file: str, include_base_dir: str) -> str:
 
         parent_dir = os.path.dirname(current_dir)
         if parent_dir == current_dir:
-            return os.path.normpath(os.path.join(include_base_dir, include_file))
+            return None
         current_dir = parent_dir
+
+
+def _get_first_line_marker(path: str) -> str | None:
+    with open(path, 'r', encoding='utf-8') as f:
+        marker = f.readline().strip()
+        if marker in (IMPORT_INCLUDE_DIRECTIVE, STRIP_DIRECTIVE):
+            return marker
+        return None

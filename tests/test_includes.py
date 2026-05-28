@@ -159,6 +159,121 @@ class IncludeExpansionTests(unittest.TestCase):
                 result,
             )
 
+    def test_python_from_import_auto_includes_module_marked_on_first_line(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_dir = os.path.join(tmp, 'dissolve')
+            radlib_dir = os.path.join(tmp, 'radlib')
+            os.makedirs(project_dir)
+            os.makedirs(radlib_dir)
+
+            with open(os.path.join(radlib_dir, 'vec2.py'), 'w', encoding='utf-8') as f:
+                f.write('#:include\nclass Vec2:\n  pass')
+
+            result = expand_includes(
+                'from radlib.vec2 import *',
+                project_dir,
+                os.path.join(project_dir, 'game.tic'),
+                PreprocessOptions(language='python'),
+            )
+
+            self.assertEqual(
+                'from radlib.vec2 import *\nclass Vec2:\n  pass\n#endinclude radlib/vec2.py',
+                result,
+            )
+
+    def test_python_import_auto_includes_module_marked_on_first_line(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_dir = os.path.join(tmp, 'dissolve')
+            radlib_dir = os.path.join(tmp, 'radlib')
+            os.makedirs(project_dir)
+            os.makedirs(radlib_dir)
+
+            with open(os.path.join(radlib_dir, 'vec2.py'), 'w', encoding='utf-8') as f:
+                f.write('#:include\nclass Vec2:\n  pass')
+
+            result = expand_includes(
+                'import radlib.vec2',
+                project_dir,
+                os.path.join(project_dir, 'game.tic'),
+                PreprocessOptions(language='python'),
+            )
+
+            self.assertEqual(
+                'import radlib.vec2\nclass Vec2:\n  pass\n#endinclude radlib/vec2.py',
+                result,
+            )
+
+    def test_python_unmarked_local_import_is_not_auto_included(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_dir = os.path.join(tmp, 'dissolve')
+            radlib_dir = os.path.join(tmp, 'radlib')
+            os.makedirs(project_dir)
+            os.makedirs(radlib_dir)
+
+            with open(os.path.join(radlib_dir, 'screen.py'), 'w', encoding='utf-8') as f:
+                f.write('class Screen:\n  pass')
+
+            result = expand_includes(
+                'from radlib.screen import Screen',
+                project_dir,
+                os.path.join(project_dir, 'game.tic'),
+                PreprocessOptions(language='python'),
+            )
+
+            self.assertEqual('from radlib.screen import Screen', result)
+
+    def test_python_missing_import_is_not_auto_included(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_dir = os.path.join(tmp, 'dissolve')
+            os.makedirs(project_dir)
+
+            result = expand_includes(
+                'from random import randint',
+                project_dir,
+                os.path.join(project_dir, 'game.tic'),
+                PreprocessOptions(language='python'),
+            )
+
+            self.assertEqual('from random import randint', result)
+
+    def test_python_from_import_auto_strips_module_marked_on_first_line(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_dir = os.path.join(tmp, 'dissolve')
+            radlib_dir = os.path.join(tmp, 'radlib')
+            os.makedirs(project_dir)
+            os.makedirs(radlib_dir)
+
+            with open(os.path.join(radlib_dir, 'tic_80_api.py'), 'w', encoding='utf-8') as f:
+                f.write('#:strip\ndef cls():\n  pass')
+
+            result = expand_includes(
+                'from radlib.tic_80_api import *\ncls()',
+                project_dir,
+                os.path.join(project_dir, 'game.tic'),
+                PreprocessOptions(language='python'),
+            )
+
+            self.assertEqual('cls()', result)
+
+    def test_python_import_auto_strips_module_marked_on_first_line(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_dir = os.path.join(tmp, 'dissolve')
+            radlib_dir = os.path.join(tmp, 'radlib')
+            os.makedirs(project_dir)
+            os.makedirs(radlib_dir)
+
+            with open(os.path.join(radlib_dir, 'tic_80_api.py'), 'w', encoding='utf-8') as f:
+                f.write('#:strip\ndef cls():\n  pass')
+
+            result = expand_includes(
+                'import radlib.tic_80_api\ncls()',
+                project_dir,
+                os.path.join(project_dir, 'game.tic'),
+                PreprocessOptions(language='python'),
+            )
+
+            self.assertEqual('cls()', result)
+
     def test_shared_nested_import_include_is_expanded_only_once(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_dir = os.path.join(tmp, 'rainbow')
